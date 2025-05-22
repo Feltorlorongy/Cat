@@ -7,7 +7,7 @@ setInterval(() => {
             return response.json();
         })
         .then(data => {
-            document.getElementById("").innerText = data[0];
+            //document.getElementById("").innerText = data[0];
         })
         .catch(error => {
             console.error("Hiba történt a következő művelet során:", error, " :c");
@@ -22,7 +22,8 @@ setInterval(() => {
             return response.json();
         })
         .then(data => {
-            document.getElementById("full").backgroundImage = url(data[0].url);
+            document.getElementById("full").style.background = `url(${data[0].url})`;
+            console.log(data[0].url)
         })
         .catch(error => {
             console.error("Hiba történt a következő művelet során:", error, " :c");
