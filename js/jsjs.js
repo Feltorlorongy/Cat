@@ -1,92 +1,111 @@
-const canvas = document.getElementById("cw");
-const context = canvas.getContext("2d");
-context.globalAlpha = 0.5;
-
-const cursor = {
-  x: innerWidth / 2,
-  y: innerHeight / 2,
+const selectBox = document.querySelector(".select-box"),
+    selectBtnX = selectBox.querySelector(".options .playerX"),
+    selectBtnO = selectBox.querySelector(".options .playerO"),
+    playBoard = document.querySelector(".play-board"),
+    players = document.querySelector(".players"),
+    allBox = document.querySelectorAll("section span"),
+    resultBox = document.querySelector(".result-box"),
+    wonText = resultBox.querySelector(".won-text"),
+    replayBtn = resultBox.querySelector("button");
+// Variables for game state
+let playerXIcon = "fas fa-times"; // FontAwesome icon class for 'X'
+let playerOIcon = "far fa-circle"; // FontAwesome icon class for 'O'
+let playerSign = "X";
+let runBot = true;
+// Initialize the game
+window.onload = () => {
+    // Add click event to all boxes
+    allBox.forEach(box => {
+        box.addEventListener("click", () => clickedBox(box));
+    });
 };
-
-let particlesArray = [];
-
-generateParticles(101);
-setSize();
-anim();
-
-addEventListener("mousemove", (e) => {
-  cursor.x = e.clientX;
-  cursor.y = e.clientY;
-});
-
-addEventListener(
-  "touchmove",
-  (e) => {
-    e.preventDefault();
-    cursor.x = e.touches[0].clientX;
-    cursor.y = e.touches[0].clientY;
-  },
-  { passive: false },
-);
-
-addEventListener("resize", () => setSize());
-
-function generateParticles(amount) {
-  for (let i = 0; i < amount; i++) {
-    particlesArray[i] = new Particle(
-      innerWidth / 2,
-      innerHeight / 2,
-      4,
-      generateColor(),
-      0.02,
-    );
-  }
+// Player X selection
+selectBtnX.onclick = () => {
+    selectBox.classList.add("hide");
+    playBoard.classList.add("show");
+};
+// Player O selection
+selectBtnO.onclick = () => {
+    selectBox.classList.add("hide");
+    playBoard.classList.add("show");
+    players.classList.add("active", "player");
+};
+// Handle user click
+function clickedBox(element) {
+    if (players.classList.contains("player")) {
+        playerSign = "O"; // Set sign to 'O' if player selected 'O'
+        element.innerHTML = `<i class="${playerOIcon}"></i>`; // Add 'O' icon
+        players.classList.remove("active"); // Switch active player
+    } else {
+        element.innerHTML = `<i class="${playerXIcon}"></i>`; // Add 'X' icon
+        players.classList.add("active");
+    }
+    element.setAttribute("id", playerSign); // Set ID to player sign
+    element.style.pointerEvents = "none"; 
+    playBoard.style.pointerEvents = "none";
+    selectWinner(); // Check for a winner
+    // Random delay for bot's move
+    const randomTimeDelay = Math.floor(Math.random() * 1000) + 200;
+    setTimeout(() => {
+        bot();
+    }, randomTimeDelay);
 }
-
-function generateColor() {
-  let hexSet = "0123456789ABCDEF";
-  let finalHexString = "#";
-  for (let i = 0; i < 6; i++) {
-    finalHexString += hexSet[Math.ceil(Math.random() * 15)];
-  }
-  return finalHexString;
+// Bot's move
+function bot() {
+    if (runBot) {
+        const availableBoxes = [...allBox].filter(box => !box.childElementCount); // Get available boxes
+        const randomBox = availableBoxes[Math.floor(Math.random() * availableBoxes.length)]; // Pick a random box
+        if (randomBox) {
+            if (players.classList.contains("player")) {
+                playerSign = "X"; // Bot plays 'X' if player chose 'O'
+                randomBox.innerHTML = `<i class="${playerXIcon}"></i>`;
+                players.classList.add("active");
+            } else {
+                playerSign = "O"; // Bot plays 'O' if player chose 'X'
+                randomBox.innerHTML = `<i class="${playerOIcon}"></i>`;
+                players.classList.remove("active");
+            }
+            randomBox.setAttribute("id", playerSign);
+            randomBox.style.pointerEvents = "none";
+            selectWinner(); // Check for a winner
+            playBoard.style.pointerEvents = "auto";
+            playerSign = "X"; // Reset to player's sign
+        }
+    }
 }
-
-function setSize() {
-  canvas.height = innerHeight;
-  canvas.width = innerWidth;
+// Get the ID of a box
+function getIdVal(classname) {
+    return document.querySelector(".box" + classname).id;
 }
-
-function Particle(x, y, particleTrailWidth, strokeColor, rotateSpeed) {
-  this.x = x;
-  this.y = y;
-  this.particleTrailWidth = particleTrailWidth;
-  this.strokeColor = strokeColor;
-  this.theta = Math.random() * Math.PI * 2;
-  this.rotateSpeed = rotateSpeed;
-  this.t = Math.random() * 150;
-
-  this.rotate = () => {
-    const ls = {
-      x: this.x,
-      y: this.y,
-    };
-    this.theta += this.rotateSpeed;
-    this.x = cursor.x + Math.cos(this.theta) * this.t;
-    this.y = cursor.y + Math.sin(this.theta) * this.t;
-    context.beginPath();
-    context.lineWidth = this.particleTrailWidth;
-    context.strokeStyle = this.strokeColor;
-    context.moveTo(ls.x, ls.y);
-    context.lineTo(this.x, this.y);
-    context.stroke();
-  };
+// Check if a winning combination is met
+function checkIdSign(val1, val2, val3, sign) {
+    return getIdVal(val1) === sign && getIdVal(val2) === sign && getIdVal(val3) === sign;
 }
-
-function anim() {
-  requestAnimationFrame(anim);
-
-  context.fillStyle = "rgb(0 0 0 / 3%)";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
-  particlesArray.forEach((particle) => particle.rotate());
+// Determine the winner
+function selectWinner() {
+    const winningCombinations = [
+        [1, 2, 3], [4, 5, 6], [7, 8, 9],
+        [1, 4, 7], [2, 5, 8], [3, 6, 9],
+        [1, 5, 9], [3, 5, 7]
+    ];
+    const isWinner = winningCombinations.some(combination => checkIdSign(...combination, playerSign));
+    if (isWinner) {
+        runBot = false; // Stop the bot
+        setTimeout(() => {
+            resultBox.classList.add("show");
+            playBoard.classList.remove("show");
+            wonText.innerHTML = `Player <p>${playerSign}</p> won the game!`;
+        }, 700);
+    } else if ([...allBox].every(box => box.id)) { // Check for a draw
+        runBot = false;
+        setTimeout(() => {
+            resultBox.classList.add("show");
+            playBoard.classList.remove("show");
+            wonText.textContent = "Match has been drawn!";
+        }, 700);
+    }
 }
+// Replay button click event
+replayBtn.onclick = () => {
+    window.location.reload(); // Reload the page
+};
